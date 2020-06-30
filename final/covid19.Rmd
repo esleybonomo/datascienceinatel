@@ -1,0 +1,161 @@
+---
+title: "COVID-19"
+author: "Esley Bonomo"
+date: "6/22/2020"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(janitor)
+library(ggplot2)
+library(tidyverse)
+library(data.table)
+library(scales)
+```
+
+## R Markdown
+
+Esse documento tem como objetivo tentar entender os dados relacionados ao COVID-19
+
+```{r}
+#Lendo dados referente ao COVID-19
+global_data <- read.csv2("dataset/WHO-COVID-19-global-data.csv", header = TRUE, sep = ",") %>% 
+  clean_names() %>% 
+  arrange(date_reported, country)
+
+#Transformando para formato de data
+global_data <- global_data %>% 
+  mutate(date_reported = as.Date(date_reported, format = "%Y-%m-%d"))
+
+#Pegando a data inicial e a última data dos dados
+start_date <- min(global_data$date_reported)
+last_date <- max(global_data$date_reported)
+
+population <- read.csv2("dataset/population_by_country_2020.csv", header = TRUE, sep = ",") %>% 
+  clean_names() %>% 
+  rename(country = country_or_dependency) %>% 
+  mutate(country = as.character(country)) %>% 
+  mutate(country = if_else(country == "United States", "United States of America", country))  %>% 
+  mutate(country = if_else(country == "United Kingdom", "The United Kingdom", country))   %>% 
+  mutate(country = if_else(country == "Iran", "Iran (Islamic Republic of)", country)) 
+
+#Juntando os dados da covid com a população mundial
+global_data <- merge(global_data, population, by = "country")
+
+global_data <- global_data %>% 
+  mutate(cumulative_cases = if_else(new_cases < 0, -new_cases + cumulative_cases, cumulative_cases)) %>% 
+  mutate(rate_deaths_population = as.numeric(sprintf("%0.4f", cumulative_deaths*100/population_2020))) %>% 
+  mutate(rate_cases_population = as.numeric(sprintf("%0.4f", cumulative_cases*100/population_2020))) %>% 
+  mutate(rate_deaths_cases = as.numeric(sprintf("%0.4f", cumulative_deaths*100/cumulative_cases))) %>% 
+  group_by(country) %>% 
+  complete(date_reported = seq.Date(start_date, last_date, by="day")) %>%
+  ungroup()
+```
+
+```{r}
+top_covid <- function(data = NULL, # data frame
+                    h = 10, # head
+                    dt, # last date
+                    ycol, # columns used in arrange
+                    title, # title to plot
+                    xlab, # xlab to plot
+                    ylab # ylab to plot
+                    ){
+  
+  #Pegando os top países com mais casos no data frame
+  top_data <- data %>%
+    filter( date_reported == dt) %>%
+    arrange(desc(!!sym(ycol))) %>%
+    head(h) %>%
+    select(country)
+
+  #Filtrando os dados dos top países no data frame
+  data_from_top <- data %>%
+    filter(country %in% top_data$country)
+
+  #Plotando o gráfico 
+  p <- data_from_top %>%
+    ggplot( aes(x = date_reported, y = !!sym(ycol), colour = country) ) +
+    geom_line() +
+    ggtitle(title) +
+    xlab(xlab) +
+    ylab(ylab)
+  
+  plotly::ggplotly(p)
+}
+```
+
+
+```{r}
+top_covid(global_data, 10, last_date, "cumulative_deaths",
+            "Top 10 Countrys - Deaths Covid 19", "Date", "Cumulative Deaths")
+```
+
+
+```{r}
+top_covid(global_data, 10, last_date, "cumulative_cases",
+            "Top 10 Countrys - Cases Covid 19", "Date", "Cumulative Cases")
+```
+
+```{r}
+#Pegando os 10 países com mais taxa de mortes sobre a população total
+top_covid(global_data, 10, last_date, "rate_deaths_population",
+            "Top 10 Countrys - Death rate by population - Covid 19", "Date", "Death Rate")
+```
+
+```{r}
+#Pegando os 10 países com mais taxa de infectados sobre a população total
+top_covid(global_data, 10, last_date, "rate_cases_population",
+            "Top 10 Countrys - Infected rate by population - Covid 19", "Date", "Infected Rate")
+```
+
+```{r}
+#Pegando os 10 países com mais taxa de infectados sobre a população total
+top_covid(global_data, 10, last_date, "rate_deaths_cases",
+            "Top 10 Countrys - Deaths by Infected rate - Covid 19", "Date", "Death by Infected Rate")
+```
+
+```{r}
+#Carregando o nome das colunas
+only_numeric_data <- select_if(global_data, is.numeric) %>% 
+  na.omit()
+```
+
+```{r, echo = FALSE}
+correl_data <- cor(only_numeric_data) %>% 
+  round(2) 
+
+print(correl_data)
+```
+
+```{r, echo = FALSE}
+#Plotando a correlação dos números níveis
+corrplot::corrplot(correl_data, 
+                   type = "upper",
+                   tl.col = "black",
+                   )
+```
+
+``` {r}
+graf_cases_deaths <-  
+  global_data %>% 
+  filter(country == "Brazil") %>% 
+  ggplot(aes(y=new_cases, x=new_deaths)) +
+  geom_point(aes(col=new_cases)) +
+  geom_smooth(method="loess") +
+  labs(subtitle = "Novos Casos vs Novas Mortes - Brasil",
+       x = "Novas mortes", y = "Novos casos", color = "Casos vs Mortes")
+ 
+plotly::ggplotly(graf_cases_deaths)
+
+```
+
+```{r}
+#Regressão linear
+lm(data = global_data, formula = cumulative_cases ~ cumulative_deaths)
+```
