@@ -624,9 +624,9 @@ plot(amostras, MSE_vector, col=1, pch=1, main = 'Erro Quadrático Médio',
   • install.packages("xts")
   • install.packages("moments")
 ```{r}
-install.packages("quantmod")
-install.packages("xts")
-install.packages("moments")
+#install.packages("quantmod")
+#install.packages("xts")
+#install.packages("moments")
 library(quantmod)
 library(xts)
 library(moments)
@@ -686,7 +686,7 @@ addBBands()
 
 plot(addBBands())
 
-OBS: Não consegui rodar
+# OBS: Não consegui rodar
 
 ```
 
