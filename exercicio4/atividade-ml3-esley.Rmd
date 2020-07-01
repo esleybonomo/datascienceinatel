@@ -12,6 +12,16 @@ TODO: Fazer execícios de múltiplas escolhas
 
 
 ## Exercícios Computacionais
+
+```{r}
+#install.packages("varhandle")
+#install.packages("fastDummies")
+#install.packages("e1071")
+#install.packages("ROCR")
+
+```
+
+### Exercício 1
 Considere o conjunto de dados iris, amplamente conhecido e usado como exemplo em diversos livros de aprendizagem de máquina. Esse conjunto já vem incorporado em diversos pacotes das linguagens R e Python, de acordo com
 
 Linguagem R: library(datasets)
@@ -25,20 +35,14 @@ As variáveis explanatórias desse conhecido dataset são:
 • Sepal.Length: comprimento da sépala da flor
 • Sepal.Width: largura da sépala da flor
 
-– 1) Realize o pré-processamento necessário para extração dos dados relacionados à classe virginica.
+1) Realize o pré-processamento necessário para extração dos dados relacionados à classe virginica.
 ```{r}
-#install.packages("varhandle")
-#install.packages("fastDummies")
-
 library(datasets) 
 library(varhandle)
 library(tidyverse)
 library(fastDummies)
 library(caret)
-
-iris
 ```
-
 2) Faça a análise de dados das variáveis explanatórias para o conjunto de dados.
 ```{r}
 summary(iris)
@@ -139,4 +143,245 @@ pred_flor1
 
 pred_flor2 <- predict(modelo_ML_logistic, flor2, type = 'response')
 pred_flor2
+```
+
+### Exercício 2
+
+```{r}
+#Carregando as libs
+library(datasets) 
+library(varhandle)
+library(tidyverse)
+library(fastDummies)
+library(caret)
+library(e1071)
+
+```
+Considere o desenvolvimento do modelo de classificação do Exercício Computacional 1 - obtenha a matriz de confusão do classificador. O ponto chave aqui é realizar a interpretação dos resultados obtidos.
+
+```{r}
+dataset = iris
+
+all_species <- data.frame(Species = iris$Species)
+binary_species <- dummy_cols(all_species, "Species", remove_selected_columns = TRUE)
+
+Species <- binary_species %>% select(Species_virginica)
+
+dataset <- data.frame(dataset$Sepal.Length, dataset$Sepal.Width, dataset$Petal.Length, dataset$Petal.Width, Species=Species$Species_virginica)
+
+cols <- c("Species")
+
+dataset[cols] <- lapply(dataset[cols], factor) 
+
+#Seek em 12
+set.seed(12)
+
+indices_treinamento <- createDataPartition(dataset$Species, p = 0.9, list = FALSE)
+#Separando dados
+dados_treinamento <-dataset[indices_treinamento,]
+dados_teste <- dataset[-indices_treinamento,]
+
+previsao_ml <- function (dados_treinamento, dados_teste, equation) {
+  ml_log <- glm(equation, data = dados_treinamento, family = 'binomial')
+
+  #Previsão de teste
+  previsao_teste <- predict(ml_log, dados_teste, type="response")
+  previsao_teste <- round(as.numeric(previsao_teste))
+  previsao_teste <- as.factor(previsao_teste)
+  dados_teste_fatores = as.factor(dados_teste$Species)
+  previsao_teste_data <- data.frame(previsao_teste, dados_teste_fatores)
+  confusionMatrix(data = previsao_teste, reference = dados_teste_fatores, positive = "1")
+}
+
+#Modelos logistico de todas espécies
+equation <- as.formula("Species ~ .")
+previsao_ml(dados_treinamento, dados_teste, equation)
+
+#Modelos logistico de todas espécies
+equation <- as.formula("Species ~ dataset.Petal.Width + dataset.Petal.Length")
+previsao_ml(dados_treinamento, dados_teste, equation)
+```
+
+### Exercício 3
+Uma instituição financeira nos forneceu um conjunto de dados relacionados à créditos financeiros presentes no
+banco de dados da instituição. A instituição está trabalhando em um projeto de ciência de dados para previsão
+de risco de crédito. Nós iremos participar de uma fase específica desse projeto com o objetivo de construir um
+classificador, que possa auxiliar na análise de risco de crédito de diversos clientes da instituição.
+O modelo de ML (i.e., classificador) deve prever se um determinado cliente deve ou não receber créditos de
+produtos financeiros ofertados pela instituição. Isso significa que teremos acesso a um conjunto de dados com
+informações diversas sobre inúmeros clientes da instituição.
+O conjunto de dados consiste em vinte (20) variáveis explanatórias que consistem em informações diversas sobre
+os clientes incluindo: duração e tamanho do crédito, indicadores de saldo e operações financeiras, além de dados
+dos clientes como idade, dependentes, emprego e até contatos como telefone. Tais informações são apresentadas
+com codificação que são processadas pela instituição para posteriores interpretações. Com isso, nossa tarefa
+consiste em lidar com os dados codificados e a variável de saída credit.rating, que indica o estado de aprovação
+(1) ou desaprovação (0) de crédito para cada dados de treinamento (registro) do dataset.
+Os pacotes listados abaixo serão fundamentais para as questões avaliativas:
+• library(caret)
+• library(ROCR)
+• library(e1071)
+
+```{r}
+library(caret)
+library(ROCR)
+library(e1071)
+```
+
+
+1) Realize a importação do arquivo .csv fornecido para o RStudio
+```{r}
+dataset_credito <- read.csv("dataset/credit_dataset.csv", header = TRUE, sep = ',')
+```
+
+2) Faça a análise exploratória do dataset e verifique:
+∗ i) a necessidade de normalização dos dados
+∗ ii) conversão para fatores
+
+```{r}
+summary(dataset_credito)
+head(dataset_credito)
+str(dataset_credito)
+```
+
+
+3) Considerando o item 2) identifique quais são as variáveis numéricas e os fatores.
+∗ Crie duas funções: para normalização e conversão em fatores.
+```{r}
+factor_conversion <- function(df , variaveis){
+  for (variavel in variaveis){
+    df[[variavel]] <- as.factor(df[[variavel]])
+  }
+  return(df)
+}
+
+#Feature scaling
+normalizar_features <- function(df, variables){
+  for (variable in variables){
+    df[[variable]] <- scale(df[[variable]], center = T, scale = T)
+  }
+  return(df)
+}
+```
+
+```{r}
+numeric_vars <- c("credit.duration.months", "age", "credit.amount")
+dataset_credito_normalizado <- normalizar_features(dataset_credito, numeric_vars)
+categorical_vars <- c('credit.rating', 'account.balance', 'previous.credit.payment.status',
+                      'credit.purpose', 'savings', 'employment.duration', 'installment.rate',
+                      'marital.status', 'guarantor', 'residence.duration', 'current.assets',
+                      'other.credits', 'apartment.type', 'bank.credits', 'occupation', 
+                      'dependents', 'telephone', 'foreign.worker')
+dataset_credito_normalizado_factor <- factor_conversion(dataset_credito_normalizado, categorical_vars)
+str(dataset_credito_normalizado_factor)
+```
+
+4) Realize a divisão do conjunto de treino e teste em 60/40.
+```{r}
+size <- nrow(dataset_credito_normalizado_factor)
+index_training = sample(1:size, size = 0.6*size)
+training_data = dataset_credito_normalizado_factor[index_training,]
+test_data     = dataset_credito_normalizado_factor[-index_training,]
+```
+ 
+5) Para reprodução dos resultados use o set.seed(100).
+```{r}
+set.seed(100)
+```
+
+6) Construa e treine o modelo preditivo de ML baseado em regressão logística.
+```{r}
+equation <- "credit.rating ~ ."
+equation <- as.formula(equation)
+modelo_ML_logistic_1 <- glm(equation, data = training_data, family = "binomial")
+```
+
+– 7) Faça a síntese do modelo e interprete os seus resultados.
+```{r}
+summary(modelo_ML_logistic_1)
+```
+
+8) Faça as predições para os dados de teste e avalie os resultados com a matriz de confusão.
+```{r}
+test_features <- test_data[,-1]
+test_target   <- test_data[,1]
+previsao_teste <- predict(modelo_ML_logistic_1, test_data, type = 'response')
+previsao_teste <- round(previsao_teste)
+summary(previsao_teste)
+```
+
+```{r}
+previsao_teste_data <- data.frame(previsao_teste, test_target)
+colnames(previsao_teste_data) <- c('Previsão','Target')
+summary(previsao_teste_data)
+```
+
+```{r}
+cm_modelo_1 <- confusionMatrix(table(data = previsao_teste, reference = test_target), positive = "1")
+cm_modelo_1
+```
+
+– 9) Use a função varImp do pacote caret para descobrir as variáveis explanatórias mais relevantes
+para o modelo.
+```{r,fig.height=12, fig.width=12}
+controle_procedimento      <- trainControl(method = "repeatedcv", number = 10, repeats = 2)
+modelo_ML_controle_traning <- train(equation, data = training_data, method = 'glm', trControl = controle_procedimento)
+feature_selection = varImp(modelo_ML_controle_traning, scale = TRUE)
+plot(feature_selection)
+```
+
+10) Obtenha a curva ROC do classificador antes da análise varImp
+```{r}
+previsao_teste_modelo_1 <- predict(modelo_ML_logistic_1, test_data, type = 'response')
+previsoes_finais_modelo_1 <- prediction(previsao_teste_modelo_1, test_target)
+
+plot.roc.curve <- function(predictions, title.text){
+  perf <- performance(predictions, "tpr", "fpr")
+  plot(perf,col = "black",lty = 1, lwd = 2,
+       main = title.text, cex.main = 0.6, cex.lab = 0.8,xaxs = "i", yaxs = "i")
+  abline(0,1, col = "red")
+  auc <- performance(predictions,"auc")
+  auc <- unlist(slot(auc, "y.values"))
+  auc <- round(auc,2)
+  legend(0.4,0.4,legend = c(paste0("AUC: ",auc)), cex = 0.6, bty = "n", box.col = "white")
+}
+
+par(mfrow = c(1, 2))
+plot.roc.curve(previsoes_finais_modelo_1, title.text = "Curva ROC (Modelo 1)")
+```
+
+11) Obtenha a curva ROC do classificador após da análise com varImp
+```{r}
+equation_nova <- "credit.rating ~ account.balance + credit.purpose + previous.credit.payment.status + savings + credit.duration.months"
+
+equation_nova <- as.formula(equation_nova)
+modelo_ML_logistic_2 <- glm(equation_nova, data = training_data, family = "binomial")
+modelo_ML_logistic_2
+summary(modelo_ML_logistic_2)
+```
+
+
+```{r}
+previsao_teste_2 <- predict(modelo_ML_logistic_2, test_data, type = 'response')
+previsao_teste_2 <- round(previsao_teste_2)
+previsao_teste_2_data <- data.frame(previsao_teste_2, test_target)
+colnames(previsao_teste_2_data) <- c('Previsão Nova','Target')
+```
+
+```{r}
+cm_modelo_2 <- confusionMatrix(table(data = previsao_teste_2, reference = test_target), positive = "1")
+previsao_teste_modelo_2 <- predict(modelo_ML_logistic_2, test_data, type = 'response')
+previsoes_finais_modelo_2 <- prediction(previsao_teste_modelo_2, test_target)
+
+plot.roc.curve <- function(predictions, title.text){
+  perf <- performance(predictions, "tpr", "fpr")
+  plot(perf,col = "black",lty = 1, lwd = 2,
+       main = title.text, cex.main = 0.6, cex.lab = 0.8,xaxs = "i", yaxs = "i")
+  abline(0,1, col = "red")
+  auc <- performance(predictions,"auc")
+  auc <- unlist(slot(auc, "y.values"))
+  auc <- round(auc,2)
+  legend(0.4,0.4,legend = c(paste0("AUC: ",auc)), cex = 0.6, bty = "n", box.col = "white")
+}
+
+plot.roc.curve(previsoes_finais_modelo_2, title.text = "Curva ROC (Modelo 2)")
 ```
