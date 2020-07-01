@@ -1,0 +1,142 @@
+---
+title: "Atividades de ML3"
+author: "Esley Bonomo"
+date: "4/22/2020"
+output: html_document
+---
+
+# Atividades
+
+TODO: Fazer execícios de múltiplas escolhas
+## Exercícios de Múltipla Escolha
+
+
+## Exercícios Computacionais
+Considere o conjunto de dados iris, amplamente conhecido e usado como exemplo em diversos livros de aprendizagem de máquina. Esse conjunto já vem incorporado em diversos pacotes das linguagens R e Python, de acordo com
+
+Linguagem R: library(datasets)
+Linguagem Python: from sklearn import datasets
+
+A partir do conjunto de dados carregado capture somente os dados relacionados com a classe virginica, que consiste em uma espécie de uma planta (flor). O objetivo desse exercício é construir um classificador binário a partir de um modelo de regressão logística, permitindo verificar se uma espécie a ser testada é ou não do tipo virginica. Isso significa que um pré-processamento deve ser realizado sobre o dataset iris a fim de obtermos apenas duas classes (e.g., 0 -> não é virginica e 1 -> é virginica).
+
+As variáveis explanatórias desse conhecido dataset são:
+• Petal.Length: comprimento da pétala da flor
+• Petal.Width: largura da pétala da flor
+• Sepal.Length: comprimento da sépala da flor
+• Sepal.Width: largura da sépala da flor
+
+– 1) Realize o pré-processamento necessário para extração dos dados relacionados à classe virginica.
+```{r}
+#install.packages("varhandle")
+#install.packages("fastDummies")
+
+library(datasets) 
+library(varhandle)
+library(tidyverse)
+library(fastDummies)
+library(caret)
+
+iris
+```
+
+2) Faça a análise de dados das variáveis explanatórias para o conjunto de dados.
+```{r}
+summary(iris)
+
+all_species <- data.frame(Species = iris$Species)
+binary_species <- dummy_cols(all_species, "Species", remove_selected_columns = TRUE)
+
+Species <- binary_species %>% select(Species_virginica)
+dataset <- data.frame(iris$Sepal.Length, iris$Sepal.Width, iris$Petal.Length, iris$Petal.Width, Species=Species$Species_virginica)
+
+cols <- c("Species")
+dataset[cols] <- lapply(dataset[cols], factor) 
+```
+
+3) Realize a divisão do conjunto de treino e teste em 90/10.
+```{r}
+indices_treinamento <- createDataPartition(dataset$Species, p = 0.9, list = FALSE)
+dados_treinamento <-dataset[indices_treinamento,]
+dados_teste <- dataset[-indices_treinamento,]
+```
+
+4) Para reprodução dos resultados use o set.seed(12)
+```{r}
+set.seed(12)
+```
+
+5) Forneça visualizações de dispersão e densidades das variáveis explanatórias de treino e as classes.
+```{r}
+dados_treinamento %>% 
+ggplot(aes(x = iris.Petal.Length, y = iris.Petal.Width, color=Species)) + 
+  geom_point() + 
+  scale_color_discrete(name = "Legenda", labels = c("Não Virginica","Virginica"))+
+  ylab('Width (largura)') + 
+  xlab('Length (Comprimento)') + 
+  ggtitle("Gráfico de Dispersão")
+
+dados_treinamento %>% 
+ggplot(aes(x=iris.Petal.Length, fill= Species)) + 
+  geom_density(alpha=.5) + 
+  xlab('Comprimento (length)') +
+  scale_fill_discrete(name = "Legenda", labels = c("Não Virginica","Virginica")) + 
+  ggtitle("Gráfico de Densidades") 
+
+dados_treinamento %>% 
+  ggplot(aes(x=dados_treinamento$iris.Petal.Width, fill= Species)) + 
+  geom_density(alpha=.5) + 
+  xlab('Largura (width)') +
+  scale_fill_discrete(name = "Legenda", labels = c("Não Virginica","Virginica")) + 
+  ggtitle("Gráfico de Densidades") 
+
+feature_dataframe <- dados_treinamento[,1:4]
+matrix_corr_features <- cor(feature_dataframe)
+matrix_corr_features
+
+corrplot::corrplot(matrix_corr_features, method = 'color')
+```
+
+6) Construa e treine o modelo preditivo de ML baseado em regressão logística
+```{r}
+eq <- " Species ~ ."
+eq <- as.formula(eq)
+eq
+
+modelo_ML_logistic <- glm(eq, data = dados_treinamento, family = 'binomial')
+modelo_ML_logistic
+```
+
+7) Faça a síntese do modelo e interprete os seus resultados
+```{r}
+summary(modelo_ML_logistic)
+```
+
+8) Encontre as variáveis explanatórias mais relevantes para o modelo.
+```{r}
+modelo_ML_logistic_2 <- glm(Species ~ iris.Petal.Width + iris.Petal.Length, data = dados_treinamento, family = 'binomial')
+summary(modelo_ML_logistic_2)
+```
+
+9) Faça as predições para os dados de teste e avalie os resultados
+```{r}
+previsao_teste <- predict(modelo_ML_logistic_2, dados_teste, type="response")
+previsao_teste <- round(as.numeric(previsao_teste))
+previsao_teste <- as.factor(previsao_teste)
+dados_teste_fatores = as.factor(dados_teste$Species)
+previsao_teste_data <- data.frame(previsao_teste, dados_teste_fatores)
+
+confusionMatrix(data = previsao_teste, reference = dados_teste_fatores, positive = "1")
+```
+
+
+10) A partir dos novos dados de entrada colocados abaixo, realize as classificações com o modelo
+```{r}
+flor1 <- data.frame(iris.Sepal.Length=6.4, iris.Sepal.Width=2.8, iris.Petal.Length=4.6, iris.Petal.Width=1.8)
+flor2 <- data.frame(iris.Sepal.Length=6.3, iris.Sepal.Width=2.5, iris.Petal.Length=4.1, iris.Petal.Width=1.7)
+
+pred_flor1 <- predict(modelo_ML_logistic, flor1, type = 'response')
+pred_flor1
+
+pred_flor2 <- predict(modelo_ML_logistic, flor2, type = 'response')
+pred_flor2
+```
