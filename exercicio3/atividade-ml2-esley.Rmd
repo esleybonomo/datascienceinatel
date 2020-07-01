@@ -1,0 +1,153 @@
+---
+title: "Atividades de ML2"
+author: "Esley Bonomo"
+date: "4/22/2020"
+output: html_document
+---
+
+# Atividades
+
+TODO: Fazer execícios de múltiplas escolhas
+## Exercícios de Múltipla Escolha
+
+### Exercício 1 (Modelos de Regressão Linear Simples e Múltipla)
+
+### Exercício 2 (Modelos de Regressão Linear Simples e Múltipla)
+
+### Exercício 3 (Modelos de Regressão Linear Simples e Múltipla)
+
+### Exercício 4 (Modelos de Regressão Linear Simples e Múltipla)
+
+### Exercício 5 (Algoritmo do Gradiente Descendente)
+
+### Exercício 6 (Modelos de Regressão Linear Simples e Múltipla)
+
+### Exercício 7 (Álgebra matricial e equações normais)
+
+### Exercício 8 (Convergência do Algoritmo Gradiente Descendente)
+
+### Exercício 9 (Normalização e o Algoritmo Gradiente Descendente)
+
+### Exercício 10 (Interpretabilidade dos Modelos de Regressão Linear)
+
+
+## Exercícios Computacionais
+
+Considere o conjunto de dados data.txt, que organiza em um arquivo de texto dados sobre os lucros de diversas empresas e a população da cidade na qual a respectiva empresa se localiza. Nosso objetivo, é conduzir uma análise de regressão linear simples para que possamos construir um modelo que busque explicar os dados que temos acesso.
+A variável explanatória, i.e., feature ou variável de entrada, é o conjunto de dados populacionais das cidades (baseados em 10,000 habitantes) em uma região analisada nos USA, enquanto a variável dependente, ou de saída, consiste nos lucros declarados pelas empresas (baseados em uma escala de $10,000 dólares) que atuam nas cidades da região analisada. De forma analítica, a função hipótese candidata no caso do modelo de regressão linear é dada por:
+ˆ
+hθ (x) = θ0 + θ1 x1 (1.5)
+Considere a função custo retratada pelo erro quadrático médio para construção do modelo de ML. Abaixo, seguem os itens que devemos solucionar neste desenvolvimento, visando alcançar o objetivo do exercício:
+
+• Questões Avaliativas
+  – 1) Faça a análise exploratória das variáveis de entrada e saída. Utilize os nomes population e profit.
+
+``` {r}
+data <- read.table('data/data.txt', sep = ',', col.names = c("Population", "Profit"))
+
+data %>% 
+  ggplot(aes(x = Population, y = Profit)) +
+  geom_point()
+
+#summary(data)
+```
+
+  – 2) Construa e treine o modelo preditivo de ML baseado em regressão linear simples.
+```{r}
+modelo_ML <- lm(Profit ~ Population, data = data)
+modelo_ML
+
+data %>% 
+  plot(Profit ~ Population)
+#abline(modelo_ML,lty=2)
+
+c <- cor(data)
+corrplot::corrplot(c, 
+                   type = "upper",
+                   tl.col = "black"
+                   )
+```
+
+  – 3) Realize as predições do modelo sobre os dados de treinamento e calcule a média de seus resíduos.
+``` {r}
+mean(modelo_ML$residuals)
+
+plot(modelo_ML$residuals)
+
+p <- predict(modelo_ML)
+p
+
+hist(p)
+```
+
+  – 4) Qual seria a predição de lucro de uma empresa, considerando uma cidade na região analisadas que conta com 100,000 habitantes?
+```{r}
+nd <- data.frame("Population" = c(10, 12, 14, 16, 18, 20), stringsAsFactors = FALSE)
+nd
+
+teste <- predict(modelo_ML, nd)
+teste
+
+teste <- data.frame("Precição (dólares)" = c(teste*10000))
+teste
+```
+
+  – 5) Implemente o algoritmo do gradiente descendente.
+``` {r}
+theta0 = 0
+theta1 = 0
+theta  = c(theta0,theta1)
+num_iters     = 15000;
+learning_rate = 0.01;
+x = data$Population
+y = data$Profit
+Algoritmo_GD <- function(X, y, theta, learning_rate, num_iters){
+  m = length(y)
+  
+  alpha = learning_rate
+ 
+  for (i in 1:num_iters){
+    h      = theta[1] + theta[2]*x
+    Theta0 = theta[1]
+    Theta1 = theta[2]
+    Theta0 = Theta0 - alpha*(1/m)*sum((h - y))
+    Theta1 = Theta1 - alpha*(1/m)*sum((h - y)*x)
+    theta  = c(Theta0, Theta1)
+  }                         
+  theta
+}
+theta_GD <- Algoritmo_GD(x, y, theta, learning_rate, num_iters)
+theta_GD
+```
+
+  – 6) Solucione o problema de regressão linear com as equações normais e faça um comparativo.
+``` {r}
+x = data$Population
+y = data$Profit
+size_data = dim(data)
+ones_data = replicate(size_data[1],1)
+X = data.frame(ones_data,x)
+X = as.matrix(X)
+theta_solution_norm_equations = solve(t(X) %*% X) %*% (t(X) %*% y) 
+theta_0_norm_eq = theta_solution_norm_equations[1]
+theta_1_norm_eq = theta_solution_norm_equations[2]
+theta_0_norm_eq
+theta_1_norm_eq
+```
+
+  – 7) Compare os resultados do modelo construído com os parâmetros obtidos com o algoritmo GD
+``` {r}
+summary(modelo_ML)
+
+summary(theta_GD)
+```
+
+
+• Dicas para o Exercício
+– Escolha o ambiente de desenvolvimento e a linguagem que for mais confortável para você (e.g., R/RStudio, Python/Jupyter, MATLAB, Java, entre outras), mas não deixe de visitar soluções diferentes, conversando com outros alunos, por exemplo).
+– Independente da linguagem, entenda o algoritmo e interprete-o como ferramenta, colocando o enfoque sobre a solução do problema.
+
+Respostas:
+Parâmetros do modelo de ML: [θ0 θ1]T = [−3.8957 1.1930]T 
+Resultado de Predição: $80,345 dólares (aprox)
+
