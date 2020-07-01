@@ -494,24 +494,64 @@ Para que seja possível explorar e visualizar o impacto de σ - realize, pelo me
 
   1. Construa o modelo de geração de dados incluindo as iterações para cada valor de σ
 ```{r}
-f <- function(std) {
-  e_ <- rnorm(n, 0, std)
+# Número de amostras
+n = 100
+# número de iterações
+num_iter = 1000
+
+# Criando um vetor de 100 valores descrecentes de desvio-padrão entre 20 e 1
+std_vector = seq(20, 1, length.out = n)
+std_vector
+
+# Criando um vetor zerado para o número de amostras e número de iterações
+MSE_vector = rep(0,length(std_vector))
+MSE_vector
+MSE        = rep(0,num_iter)
+MSE
+
+# Criando um vetor de 100 valores descrecentes de desvio-padrão entre 1 e 100
+x = seq(1, 100, length.out = n)
+x
+
+# Função hipótese verdadeira
+h_x <- 3*x + 30
+h_x
+
+for (k in 1:length(std_vector)){
+  
+  for (i in 1:num_iter){
     
-  y <- hx + e_
+    # Valor do ruído
+    epsilon <- rnorm(n, 0, std_vector[k])
+    
+    # Variável de saída
+    y <- h_x + epsilon
+    
+    # Função hipótese Estimada
+    h_x_estimado <- 2.8*x + 32
+    
+    # Erro quadrático médio para uma iteração
+    MSE[i] = (1/n)*sum(((y - h_x_estimado)^2))
+  }
   
-  hxe_ <- 2.8 * x + 32
   
-  return (mse(y, hxe_))
+  # Erro quadrático médio para várias iterações  
+  MSE_vector[k] = mean(MSE)
 }
+```
 
-for (i in 1:1000){
+  2. Faça um gráfico que mostra o impacto de σ,colocado sobre o eixo x, sobre o desempenho indicado pelo MSE, apresentado no eixo y.
+```{r}
 
-}
-
+# Plotando o gráfico de desvio padrão x MSE
+plot(std_vector,MSE_vector,col=1, pch=1, main = 'MSE - Mean Squared Error', 
+     col.main = 'black', 
+     xlab = 'Desvio padrão dos Erros',
+     ylab = 'MSE')
 ```
   
-  2. Faça um gráfico que mostra o impacto de σ,colocado sobre o eixo x, sobre o desempenho indicado pelo MSE, apresentado no eixo y.
   3. Faça uma análise: o impacto com o aumento ou redução de σ é significativo para o modelo? Qual a justificativa?
+  **R:** A medida que o desvio padrão aumenta o MSE aumenta
  
   __7. Exercício Computacional - 7__
   
@@ -521,8 +561,58 @@ for (i in 1:1000){
   Para que seja possível explorar e visualizar o impacto de n - realize, pelo menos, 1000 iterações do algoritmo. Especificamente, para cada valor do número de amostras avaliado, armazene e faça o cálculo da média aritmética sobre 1000 valores de performance, expressos pelo MSE. Um dica é aproveitar as estruturas em loop (for) do exercício anterior para a implementação das iterações.
 
   1. Construa o modelo de geração de dados incluindo as iterações para cada valor de n
+``` {r}
+# Número de iterações para cálculo do MSE
+num_iter = 1000
+
+# Vetor com valores de número de amostras
+amostras = seq(10, 100, 5)
+
+# Inicialização dos vetores de MSE
+MSE_vector = rep(0, length(amostras))
+MSE        = rep(0, num_iter)
+
+for (k in 1:length(amostras)){
+  
+  # Criando um vetor de índices x variando de 0 a 100. Utilize a função seq - sequence
+  n = amostras[k]
+  x = seq(1, 100, length.out = n)
+  
+  # Função hipótese verdadeira
+  h_x <- 3*x + 30
+  
+  for (i in 1:num_iter){
+    
+    # Ruído
+    std = 0.5
+    epsilon <- rnorm(n, 0, std)
+    
+    # Variável de saída
+    y <- h_x + epsilon
+    
+    # Função hipótese Estimada
+    h_x_estimado <- 2.8*x + 32
+    
+    # Erro quadrático médio para uma iteração
+    MSE[i] = (1/n)*sum(((y - h_x_estimado)^2))
+  }
+  
+  # Erro quadrático médio para várias iterações  
+  MSE_vector[k] = mean(MSE)
+}
+```
+
   2. Faça um gráfico que mostra o impacto de n, colocado sobre o eixo x, sobre o desempenho indicado pelo MSE, apresentado no eixo y.
+```{r}
+# Usando o base plot system do R
+plot(amostras, MSE_vector, col=1, pch=1, main = 'Erro Quadrático Médio', 
+     col.main = 'black', 
+     xlab = 'Número de Amostras',
+     ylab = 'MSE')
+```
+
   3. Faça uma análise: o impacto com o aumento ou redução de n é significativo para o modelo? Qual a justificativa?
+  **R::** A medida que aumenta as amostras, o número do MSE diminui
 
   __8. Exercício Computacional - 8__
   
@@ -533,11 +623,73 @@ for (i in 1:1000){
   • install.packages("quantmod") 
   • install.packages("xts")
   • install.packages("moments")
+```{r}
+install.packages("quantmod")
+install.packages("xts")
+install.packages("moments")
+library(quantmod)
+library(xts)
+library(moments)
+```
 
 Esses pacotes foram desenvolvidos exclusivamente para modelagem financeira quantitativa na lin- guagem R e permitem capturar séries temporais sobre as cotações de ações do mercado financeiro. Especificamente, estude e utilize a função getSymbols do pacote "quantmod" para obter séries tem- porais de diversas empresas presentes na bolsa de valores a partir de uma janela de tempo fornecida. Essa função consegue obter os dados diretamente das fontes "Yahoo Finance" (ainda ativo) e "Google Finance", que disponibilizam os dados gratuitamente. Utilize o nome "yahoo" para designar a fonte de dados na função getSymbols.
 
   1. Use a função getSymbols do pacote quantmod para capturar as cotações de ações da empresa Petrobras de janeiro/2020 até os dias atuais.
+```{r}
+Data_Inicio = as.Date("2020-01-01") 
+Data_Fim    = as.Date("2020-06-30")
+
+# Importação de Dados
+
+# Uso da função gesymbols para acessar o serviço Yahoo Finance e capturar os valores de ações das empresas (precisamos saber o código da empresa na bolsa)
+getSymbols("PETR4.SA", src = "yahoo", from = Data_Inicio, to = Data_Fim)
+?getSymbols
+
+# É importante verificarmos, também, a estabilidade do serviço tanto do Yahoo como do Google
+# Outro ponto é a possibilidade de valores NA serem trazidos na série de temporal capturada
+Serie_Temporal_Petrobras = na.omit(PETR4.SA)
+Serie_Temporal_Petrobras
+
+# Repare que o índice desse conjunto de dados consiste em datas - caracterização da série temporal
+# Observando o dataset - nós temos a cotação de abertura (open), a mais alta (high), mais baixa (low) a cotação de fechamento (close), finalizando com volume e cotação ajustada.
+
+# ==================================================================
+# Processando Dados da Série Temporal 
+
+# Focando nos dados de fechamento da série de tempo da petrobras
+Serie_Petrobras_Close <- Serie_Temporal_Petrobras$PETR4.SA.Close
+Serie_Petrobras_Close
+```
+
   2. Use a função candleChart do pacote quantmod para fazer a visualização da série temporal das cotações fechadas da Petrobras no período considerado. Pesquise e explore essa função; esse resultado é chamado de gráfico de velas (amplamente conhecido e usado em análises do mercado financeiro).
+``` {r}
+candleChart(Serie_Petrobras_Close)
+```
+
   3. Explore a série temporal obtida da empresa, teste outros períodos de tempo e identifique o significado dos campos trazidos da série.
+``` {r}
+# Usando a função plot para gerar as visualizações 
+plot(Serie_Petrobras_Close, main = "Fechamento Diário - Ações da Petrobrás", 
+     col = "red", xlab = "Tempo", ylab = "Preço da Ação", major.ticks = "months")
+
+# Candle com toda a série
+candleChart(Serie_Temporal_Petrobras)
+```
+
   4. Use a função addBands, também do pacote quantmod, para plotar diretamente limites superior/inferior sobre a série temporal do item 1). Podemos parametrizar a função fornecendo: i) o período da média móvel e ii) a quantidade de desvio padrão relacionados com os limites.
+``` {r}
+numero_desvios      = 1
+periodo_media_movel = 1
+
+chartSeries(Serie_Temporal_Petrobras)
+addBBands()
+
+plot(addBBands())
+
+OBS: Não consegui rodar
+
+```
+
   5. A partir os itens anteriores, faça uma análise dos preços de cotações da Petrobras e verifique os reflexos do momento atual que estamos passando (março/abril/2020).  
+  **R:** A partir de março os valores de ações subiram
+
